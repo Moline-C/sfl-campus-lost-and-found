@@ -1,19 +1,8 @@
-// backend.h  (Junia: menu / benchmark / tests)
-//
-// The ONE place where my code touches your teammates' code.
-// My files (main.cpp, benchmark.h, tests/test_sorts.cpp) only use these names:
-//
-//   Report / ScoredReport     one report; has reportID, category, itemName, color,
-//                             location, dateFound and score
-//   Query                     what the user is looking for (= LostItem)
-//   ranksBefore(a, b)         true if a ranks above b (higher score; tie -> smaller reportID)
-//   loadReports(path)         reads the CSV (throws std::runtime_error on problems)
-//   scoreReports(reports, q)  copy of the reports with .score filled in
-//   runMergeSort(vector&)     sorts best-first, returns the number of comparisons made
-//   runQuickSort(vector&)     same, with quicksort
-//
-// Without -DUSE_TEAM_CODE: uses placeholder_backend.h (temporary, don't submit).
-// With    -DUSE_TEAM_CODE: uses the real code from the team branches.
+   // backend.h
+   // Connects the menu, benchmark and tests to the team's code
+   // (Report, loadReports, scoring, merge sort, quicksort).
+   // Compile with -DUSE_TEAM_CODE to use the real implementations;
+   // otherwise the temporary placeholder_backend.h is used.
 
 #pragma once
 
@@ -32,7 +21,7 @@
 using ScoredReport = Report;
 using Query = LostItem;
 
-// Same rule both sorts must follow: highest score first, tie -> smaller reportID first.
+// Same rule both sorts must follow: highest score first, tie smaller reportID first.
 inline bool ranksBefore(const ScoredReport& a, const ScoredReport& b) {
     if (a.score != b.score) return a.score > b.score;
     return a.reportID < b.reportID;
