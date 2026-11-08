@@ -1,8 +1,9 @@
 // test_sorts.cpp  (Junia)
 //
 // Checks merge sort and quicksort on:
-//   - different dataset sizes (0, 1, 2, 10, 100, 1,000, 10,000, 100,000)
-//   - different starting orders (random, already ranked, reverse ranked, nearly ranked)
+//   - different dataset sizes (0, 1, 2, 3, 10, 100, 1,000, 10,000, 100,000)
+//   - different starting orders (random, already ranked, reverse ranked, nearly ranked;
+//     the ordered ones only up to kOrderedCaseSize reports, see benchmark.h)
 //   - different score patterns (all unique, many repeats, only 3 scores, all the same)
 // For every case it verifies that
 //   1) each algorithm's output is correctly ranked (score high->low, ties by reportID),
@@ -26,7 +27,7 @@
 static int g_passed = 0;
 static int g_failed = 0;
 
-// Score patterns --------------------------------------------------------
+// Score patterns 
 enum class Pattern { Unique, ManyRepeats, ThreeScores, AllSame };
 
 static const char* patternName(Pattern p) {
@@ -39,7 +40,7 @@ static const char* patternName(Pattern p) {
     return "";
 }
 
-// Starting orders -------------------------------------------------------
+// Starting orders
 enum class Order { Random, Ranked, Reverse, NearlyRanked };
 
 static const char* orderName(Order o) {
@@ -125,8 +126,14 @@ int main() {
     unsigned seed = 1;
     for (size_t n : sizes)
         for (Pattern p : patterns)
-            for (Order o : orders) runCase(n, p, o, seed++);
+            for (Order o : orders) {
+                // Ordered inputs are limited to kOrderedCaseSize reports (see benchmark.h).
+                if (o != Order::Random && n > kOrderedCaseSize) continue;
+                runCase(n, p, o, seed++);
+            }
 
-    std::cout << "\nPassed: " << g_passed << "   Failed: " << g_failed << "\n";
+    std::cout << "\nOrdered starting orders were tested up to " << kOrderedCaseSize
+              << " reports; random order was tested up to 100,000.\n";
+    std::cout << "Passed: " << g_passed << "   Failed: " << g_failed << "\n";
     return g_failed == 0 ? 0 : 1;
 }

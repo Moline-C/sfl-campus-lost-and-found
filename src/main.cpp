@@ -92,6 +92,12 @@ static void searchScreen(const std::vector<Report>& reports) {
     if (!readLine("Last known location (e.g. library west, the hub): ", q.location)) return;
     if (!readInt("Approximate day lost (1-365, 0 to skip): ", 0, 365, q.dateLost)) return;
 
+    if (q.category.empty() && q.itemName.empty() && q.color.empty() && q.location.empty() &&
+        q.dateLost == 0) {
+        std::cout << "Enter at least one detail to search with.\n";
+        return;
+    }
+
     int choice = 1;
     if (!readInt("Sort with 1) Merge sort  2) Quicksort: ", 1, 2, choice)) return;
 
@@ -102,43 +108,11 @@ static void searchScreen(const std::vector<Report>& reports) {
 }
 
 static void compareScreen(const std::vector<Report>& reports) {
-    // A fixed sample search so the comparison is repeatable.
-    Query q;
-    q.category = "electronics";
-    q.itemName = "phone";
-    q.color = "black";
-    q.location = "library west";
-    q.dateLost = 100;
-
     std::cout << "\n--- Compare merge sort vs quicksort ---\n"
               << "Sample search: electronics / phone / black / library west / day 100\n"
               << "Both sorts get an identical copy of the same scored reports.\n\n";
 
-    std::vector<ScoredReport> all = scoreReports(reports, q);
-
-    // 1) Different dataset sizes (starting order = order in the data file)
-    const size_t sizes[] = {1000, 10000, 50000, 100000};
-    bool allSame = true;
-    for (size_t n : sizes) {
-        if (n > all.size()) continue;
-        std::vector<ScoredReport> part(all.begin(), all.begin() + static_cast<long>(n));
-        allSame &= compareOnInput("File order, size " + std::to_string(n), part);
-    }
-    if (all.size() < 100000 && !all.empty()) {
-        allSame &= compareOnInput("File order, ALL reports", all);
-    }
-
-    // 2) Different starting orders on the full dataset
-    std::vector<ScoredReport> sortedIn = all, reverseIn;
-    std::sort(sortedIn.begin(), sortedIn.end(), ranksBefore);
-    reverseIn.assign(sortedIn.rbegin(), sortedIn.rend());
-    allSame &= compareOnInput("Already ranked (best first)", sortedIn);
-    allSame &= compareOnInput("Reverse ranked (worst first)", reverseIn);
-
-    // 3) Many repeated scores
-    std::vector<ScoredReport> repeated = all;
-    for (size_t i = 0; i < repeated.size(); i++) repeated[i].score = static_cast<int>(i % 3);
-    allSame &= compareOnInput("Only 3 distinct scores", repeated);
+    bool allSame = runStandardComparison(reports, [](const CompareRow& r) { printCompareRow(r); });
 
     std::cout << "\n" << (allSame ? "Both algorithms produced the same ranking every time."
                                   : "WARNING: the two algorithms disagreed on at least one run.")

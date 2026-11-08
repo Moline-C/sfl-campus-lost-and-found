@@ -1,8 +1,8 @@
-   // backend.h
-   // Connects the menu, benchmark and tests to the team's code
-   // (Report, loadReports, scoring, merge sort, quicksort).
-   // Compile with -DUSE_TEAM_CODE to use the real implementations;
-   // otherwise the temporary placeholder_backend.h is used.
+// backend.h
+// Connects the menu, benchmark and tests to the team's code
+// (Report, loadReports, scoring, merge sort, quicksort).
+// Compile with -DUSE_TEAM_CODE to use the real implementations;
+// otherwise the temporary placeholder_backend.h is used.
 
 #pragma once
 
@@ -15,13 +15,12 @@
 #include "load_csv.h"    // Abigail: vector<Report> loadReports(const string&)  (throws)
 #include "merge_sort.h"  // Abigail: void mergeSort(vector<Report>&, int& comparisons)
 #include "matching.h"    // Moline:  int calculateScore(LostItem, Report)
-#include "quick_sort.h"  // Moline:  void quickSort(vector<Report>&, int& comparisons)
-                         //          (file name and signature still to be confirmed with Moline)
+#include "quick_sort.h"  // Moline:  void quickSort(vector<Report>&, long long& comparisons)
 
 using ScoredReport = Report;
 using Query = LostItem;
 
-// Same rule both sorts must follow: highest score first, tie smaller reportID first.
+// Same rule both sorts must follow: highest score first, tie -> smaller reportID first.
 inline bool ranksBefore(const ScoredReport& a, const ScoredReport& b) {
     if (a.score != b.score) return a.score > b.score;
     return a.reportID < b.reportID;
@@ -44,7 +43,7 @@ inline unsigned long long runMergeSort(std::vector<ScoredReport>& v) {
 }
 
 inline unsigned long long runQuickSort(std::vector<ScoredReport>& v) {
-    int comparisons = 0;
+    long long comparisons = 0;
     quickSort(v, comparisons);
     return static_cast<unsigned long long>(comparisons);
 }

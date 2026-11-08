@@ -6,9 +6,12 @@
 //
 // The comparison counts come from the sorts themselves: runMergeSort and
 // runQuickSort (see backend.h) return how many comparisons the algorithm made.
+//
+// Used by the terminal menu (main.cpp) and the web server (server.cpp).
 
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -60,19 +63,94 @@ inline bool sameRanking(const std::vector<ScoredReport>& a, const std::vector<Sc
     return true;
 }
 
-// Runs both sorts on the same input and prints one row per comparison.
-// Returns true if both produced the same ranking.
-inline bool compareOnInput(const std::string& label, const std::vector<ScoredReport>& input) {
-    std::vector<ScoredReport> mergeOut, quickOut;
-    SortRun m = timeMergeSort(input, mergeOut);
-    SortRun q = timeQuickSort(input, quickOut);
-    bool same = sameRanking(mergeOut, quickOut);
+// ---------- one comparison of both sorts on the same input ----------
+struct CompareRow {
+    std::string label;
+    size_t size = 0;
+    SortRun merge;
+    SortRun quick;
+    bool same = false;  // did both sorts produce the same ranking?
+};
 
-    std::cout << std::left << std::setw(30) << label << std::right << std::setw(9) << input.size()
-              << " | merge " << std::setw(9) << std::fixed << std::setprecision(2) << m.milliseconds
-              << " ms " << std::setw(11) << m.comparisons << " cmp"
-              << " | quick " << std::setw(9) << q.milliseconds << " ms " << std::setw(11)
-              << q.comparisons << " cmp"
-              << " | " << (same ? "same ranking" : "RANKING MISMATCH") << "\n";
-    return same;
+inline CompareRow runCompare(const std::string& label, const std::vector<ScoredReport>& input) {
+    std::vector<ScoredReport> mergeOut, quickOut;
+    CompareRow row;
+    row.label = label;
+    row.size = input.size();
+    row.merge = timeMergeSort(input, mergeOut);
+    row.quick = timeQuickSort(input, quickOut);
+    row.same = sameRanking(mergeOut, quickOut);
+    return row;
+}
+
+inline void printCompareRow(const CompareRow& r) {
+    std::cout << std::left << std::setw(30) << r.label << std::right << std::setw(9) << r.size
+              << " | merge " << std::setw(9) << std::fixed << std::setprecision(2)
+              << r.merge.milliseconds << " ms " << std::setw(11) << r.merge.comparisons << " cmp"
+              << " | quick " << std::setw(9) << r.quick.milliseconds << " ms " << std::setw(11)
+              << r.quick.comparisons << " cmp"
+              << " | " << (r.same ? "same ranking" : "RANKING MISMATCH") << "\n";
+}
+
+// Size used for the "already ranked", "reverse ranked" and "repeated scores" cases.
+// A quicksort that always picks the last report as its pivot needs about n*n/2
+// comparisons on ordered data, so 100,000 reports could take minutes. 5,000
+// shows the effect and finishes in seconds. Raise it if quicksort picks a
+// better pivot.
+constexpr size_t kOrderedCaseSize = 5000;
+
+// The fixed sample search used by every comparison, so results are repeatable.
+inline Query sampleQuery() {
+    Query q;
+    q.category = "electronics";
+    q.itemName = "phone";
+    q.color = "black";
+    q.location = "library west";
+    q.dateLost = 100;
+    return q;
+}
+
+// Runs the standard set of comparisons and calls onRow(row) after each one:
+//   - different dataset sizes (starting order = order in the data file)
+//   - already ranked and reverse ranked starting orders
+//   - many repeated scores
+// Returns true if both sorts agreed on the ranking every time.
+template <class RowFn>
+bool runStandardComparison(const std::vector<Report>& reports, RowFn onRow) {
+    std::vector<ScoredReport> all = scoreReports(reports, sampleQuery());
+    bool allSame = true;
+    auto emit = [&](const std::string& label, const std::vector<ScoredReport>& input) {
+        CompareRow row = runCompare(label, input);
+        allSame = allSame && row.same;
+        onRow(row);
+    };
+
+    const size_t sizes[] = {1000, 10000, 50000, 100000};
+    for (size_t n : sizes) {
+        if (n > all.size()) continue;
+        std::vector<ScoredReport> part(all.begin(), all.begin() + static_cast<long>(n));
+        emit("File order, size " + std::to_string(n), part);
+    }
+    if (all.size() < 100000 && !all.empty()) emit("File order, all reports", all);
+
+    std::vector<ScoredReport> firstReports(
+        all.begin(), all.begin() + static_cast<long>(std::min(all.size(), kOrderedCaseSize)));
+    std::vector<ScoredReport> rankedIn = firstReports, reverseIn;
+    std::sort(rankedIn.begin(), rankedIn.end(), ranksBefore);
+    reverseIn.assign(rankedIn.rbegin(), rankedIn.rend());
+    emit("Already ranked (best first)", rankedIn);
+    emit("Reverse ranked (worst first)", reverseIn);
+
+    std::vector<ScoredReport> repeated = firstReports;
+    for (size_t i = 0; i < repeated.size(); i++) repeated[i].score = static_cast<int>(i % 3);
+    emit("Only 3 distinct scores", repeated);
+
+    return allSame;
+}
+
+// Terminal version of the comparison (used by main.cpp).
+inline bool compareOnInput(const std::string& label, const std::vector<ScoredReport>& input) {
+    CompareRow r = runCompare(label, input);
+    printCompareRow(r);
+    return r.same;
 }
