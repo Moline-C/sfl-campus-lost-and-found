@@ -15,6 +15,12 @@ bool comesBefore(Report a, Report b, long long& comparisons) {
 }
 
 int partitionReports(vector<Report>& reports, int low, int high, long long& comparisons) {
+
+    int middle = low + (high - low) / 2;
+    Report middleReport = reports[middle];
+    reports[middle] = reports[high];
+    reports[high] = middleReport;
+
     Report pivot = reports[high];
     int i = low - 1;
 
